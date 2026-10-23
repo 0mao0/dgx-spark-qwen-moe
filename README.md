@@ -9,10 +9,14 @@ vLLM serves images but is 2.5× slower per stream. This repo is the TensorFold e
 applied: single-stream generation goes from 44 tok/s (vLLM FP8) to 112 tok/s with MTP drafting, an agentic RAG
 loop drops from 90 s to 49 s per question, and images are read correctly (text in a picture answered in 2.2 s).
 At eight concurrent requests the box sustains ~450 tok/s aggregate for Qwen3.6 and ~400 tok/s for Sage-A1.5.
+Prefill is linear at roughly 0.19 ms per prompt token — a 55K-token prompt reaches its first token in ~10.7 s,
+and the two models prefill alike because they share the engine.
 
 ![single-stream generation](assets/single-stream.png)
 
 ![throughput vs concurrency](assets/concurrency.png)
+
+![prefill latency vs prompt length](assets/prefill.png)
 
 ## Models
 
