@@ -1,0 +1,15 @@
+TensorFold recipes for Qwen3.5-MoE on GB10
+Copyright 2026 <your name>
+
+This repository documents and scripts how to serve qwen3_5_moe checkpoints
+(Qwen3.6-35B-A3B, Sage-A1.5) with image input and MTP drafting on a single
+NVIDIA GB10, using the TensorFold Python engine (0.6.x line).
+
+Built on TensorFold, Copyright 2026 TensorFold contributors,
+https://github.com/ashhart/TensorFold, licensed under the Apache License 2.0.
+The Docker image described in docs/image-build.md is derived from TensorFold
+v0.6.2 plus the vision patch published on the branch
+`vision-qwen3_5_moe-cuda` of https://github.com/0mao0/TensorFold.
+
+This repository is unofficial and is not endorsed by the TensorFold authors.
+Model weights are not redistributed here; see README.md for their sources.
