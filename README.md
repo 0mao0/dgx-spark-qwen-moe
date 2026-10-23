@@ -8,8 +8,11 @@ The stock TensorFold Python engine serves the `qwen3_5_moe` family on CUDA but h
 vLLM serves images but is 2.5× slower per stream. This repo is the TensorFold engine with the vision patch
 applied: single-stream generation goes from 44 tok/s (vLLM FP8) to 112 tok/s with MTP drafting, an agentic RAG
 loop drops from 90 s to 49 s per question, and images are read correctly (text in a picture answered in 2.2 s).
+At eight concurrent requests the box sustains ~450 tok/s aggregate for Qwen3.6 and ~400 tok/s for Sage-A1.5.
 
 ![single-stream generation](assets/single-stream.png)
+
+![throughput vs concurrency](assets/concurrency.png)
 
 ## Models
 
