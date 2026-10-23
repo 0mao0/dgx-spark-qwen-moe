@@ -66,8 +66,8 @@ Verify: `curl -s localhost:18892/v1/models`, then a chat completion; images go i
 `{"type":"image_url","image_url":{"url":"data:image/png;base64,..."}}`.
 
 Notes: 126976 is the context that fits with a second 35B model resident; `--no-drafts` runs without the MTP
-head; the native 1.1.2 build is faster to start but rejects image input and measured 36 tok/s under load, so it
-does not replace this path yet.
+head. The native 1.1.2 build measured 66 tok/s single-stream and 334 tok/s at eight concurrent requests on an
+idle box (no effective MTP drafting) and rejects image input, so it does not replace this path yet.
 
 ## Credits
 
