@@ -18,6 +18,29 @@ and the two models prefill alike because they share the engine.
 
 ![prefill latency vs prompt length](assets/prefill.png)
 
+## Quality (end-to-end, 2026-10-24)
+
+Accuracy of an agentic RAG pipeline (AnGIneer) that uses this box as its LLM backend — same
+retrieval stack, same engine, same judge, same day. Sage-A1.5 is an agentic finetune of the
+same Qwen3.6-35B-A3B base that this repo also serves, so the deltas below are what the finetune
+buys and costs in a real RAG product.
+
+| Suite | Sage-A1.5 | Qwen3.6-35B-A3B | Note |
+|---|---|---|---|
+| OpenRAGBench subset, 1040 q | **90.2%** | 88.5% | Qwen: mean of 8 nightly runs (range 87.7–89.2) |
+| FinanceBench, 150 q | **64.7%** | 49.5% | Qwen: mean of 7 runs (45.3–53.3); largest stable gain |
+| Refusal recognition, 33 q | 69.7% | **78.4%** | Qwen: mean of 7 runs; the finetune answers more, refuses less |
+| Port & waterway exam, 50 q | **54.0%** | 40.0% | same-day paired single runs; Qwen's own day-to-day spread is 40–60% |
+| Professional QA, 30 q | 73.3% | **76.7%** | same-day paired single runs; 3 flips, net 1 question |
+
+The two small suites are single paired runs — expect ±3–4 questions of noise per run, so treat
+them as "no meaningful difference" rather than a ranking. The stable signal across repeated
+runs: Sage-A1.5 is materially better at answer-quality suites (finance +15 pp), slightly better
+on the main board, and gives back refusal recognition (−9 pp) — the known trade-off of an
+agentic finetune. L3 multi-step calculation questions fail under both models.
+
+![quality comparison](assets/quality.png)
+
 ## Models
 
 | Model | Weights | Size |
