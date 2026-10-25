@@ -49,7 +49,8 @@ for name in os.listdir(base):
         continue
     link = os.path.join(dst, name)
     if not os.path.exists(link):
-        os.symlink(os.path.abspath(os.path.join(base, name)), link)
+        # relative link: survives container mounts that relocate the models dir
+        os.symlink(os.path.join("..", base, name), link)
 print("classifier head ready:", dst)
 PY
 
