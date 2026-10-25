@@ -1,0 +1,100 @@
+# Four-model DGX Spark stack: two TensorFold engines (LLM) + retrieval pair (stock vLLM).
+# One-time prep: bash deploy/bootstrap.sh   (downloads ~44 GB of weights, applies the
+#   checkpoint fixes, builds the TensorFold image)
+# Start:     docker compose -f deploy/docker-compose.yml up -d
+# Sanity:    bash deploy/check-retrieval.sh
+#
+# Engine memory budget (GB10, 121 GB unified): ~25 (qwen36) + ~21 (sage) + ~5 (retrieval
+# pair, gpu-memory-utilization tuned for this coexistence) + KV overhead. Raise the
+# retrieval pair's gpu-memory-utilization if you run it without the 35B engines.
+#
+# All services use host networking — ports are the client contract:
+#   8000 qwen3.6-35b | 8007 sage-a1.5 | 8004 qwen3-embedding | 8005 qwen3-reranker
+
+services:
+  qwen36:
+    build:
+      context: ..
+    image: dgx-spark-tensorfold:0.6.2-moe-vision
+    container_name: qwen36
+    restart: unless-stopped
+    network_mode: host
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    environment:
+      - HF_HUB_OFFLINE=1
+      - TENSORFOLD_NO_UPDATE_CHECK=1
+      - TORCH_EXTENSIONS_DIR=/root/.cache/torch_extensions
+    volumes:
+      - ../models:/models:ro
+      - qwen36-cache:/root/.cache
+    command: >-
+      tensorfold serve /models/Qwen3.6-35B-A3B-MLX-4bit-MTP
+      --name qwen3.6-35b-a3b --alias qwen3.6-35b
+      --host 0.0.0.0 --port 8000
+      --parallel 8 --kv-dtype bf16 --no-thinking --vision
+      --context 114688
+
+  sage:
+    image: dgx-spark-tensorfold:0.6.2-moe-vision
+    container_name: sage
+    restart: unless-stopped
+    network_mode: host
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    environment:
+      - HF_HUB_OFFLINE=1
+      - TENSORFOLD_NO_UPDATE_CHECK=1
+      - TORCH_EXTENSIONS_DIR=/root/.cache/torch_extensions
+    volumes:
+      - ../models:/models:ro
+      - sage-cache:/root/.cache
+    command: >-
+      tensorfold serve /models/Sage-A1.5-MLX-4bit
+      --name sage-a1.5
+      --host 0.0.0.0 --port 8007
+      --parallel 8 --kv-dtype bf16 --no-thinking --vision --vision-max-images 4
+      --context 118784 --prompt-cache-gib 8 --no-update-check
+
+  embed:
+    image: vllm/vllm-openai:v0.28.0
+    container_name: embed
+    restart: unless-stopped
+    network_mode: host
+    ipc: host
+    environment:
+      - HF_HUB_OFFLINE=1
+    volumes:
+      - ../models:/models:ro
+    command: >-
+      /models/Qwen3-Embedding-0.6B
+      --served-model-name qwen3-embedding
+      --host 0.0.0.0 --port 8004
+      --convert embed --pooler-config {"pooling_type":"LAST"}
+      --max-model-len 16384 --max-num-seqs 10 --gpu-memory-utilization 0.04
+
+  rerank:
+    image: vllm/vllm-openai:v0.28.0
+    container_name: rerank
+    restart: unless-stopped
+    network_mode: host
+    ipc: host
+    environment:
+      - HF_HUB_OFFLINE=1
+    volumes:
+      - ../models:/models:ro
+    command: >-
+      /models/Qwen3-Reranker-0.6B-seqcls
+      --served-model-name qwen3-reranker
+      --host 0.0.0.0 --port 8005
+      --runner pooling --convert classify --dtype float16
+      --max-model-len 4096 --max-num-seqs 32 --gpu-memory-utilization 0.085
+      --chat-template /models/Qwen3-Reranker-0.6B-seqcls/chat_template.jinja
+
+volumes:
+  qwen36-cache:
+  sage-cache:
