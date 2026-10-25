@@ -127,7 +127,7 @@ cfg.update({"architectures": ["Qwen3ForSequenceClassification"],
 json.dump(cfg, open(f"{dst}/config.json", "w"), indent=2)
 for name in os.listdir(base):
     if name != "config.json" and not os.path.exists(f"{dst}/{name}"):
-        os.symlink(f"{base}/{name}", f"{dst}/{name}")
+        os.symlink(f"../{base}/{name}", f"{dst}/{name}")  # relative: survives container mounts
 PY
 
 docker run -d --name embed --gpus all --network host --ipc host \
