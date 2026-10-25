@@ -60,7 +60,7 @@ docker pull nvcr.io/nvidia/pytorch:26.07-py3
 cat > Dockerfile <<'DOCKER'
 FROM nvcr.io/nvidia/pytorch:26.07-py3
 COPY src/tensorfold /usr/local/lib/python3.12/dist-packages/tensorfold
-RUN pip install --no-cache-dir huggingface_hub tokenizers safetensors anyio click filelock fsspec
+RUN pip install --no-cache-dir "transformers>=5.3,<6" huggingface_hub anyio click filelock fsspec
 ENV TENSORFOLD_NO_UPDATE_CHECK=1
 DOCKER
 docker build -t dgx-spark-tensorfold:0.6.2-moe-vision .
@@ -92,9 +92,14 @@ docker run -d --name sage --gpus all --network host --ipc host \
 Verify: `curl -s localhost:18892/v1/models`, then a chat completion; images go in as
 `{"type":"image_url","image_url":{"url":"data:image/png;base64,..."}}`.
 
-Notes: 126976 is the context that fits with a second 35B model resident; `--no-drafts` runs without the MTP
-head. The native 1.1.2 build measured 66 tok/s single-stream and 334 tok/s at eight concurrent requests on an
-idle box (no effective MTP drafting) and rejects image input, so it does not replace this path yet.
+Notes: tested on DGX Spark GB10 (121 GB unified memory, driver 580.173.02). 126976 is the context that fits
+with a second 35B model resident — if startup refuses it, take the value suggested in the
+`estimated largest fitting ... window` message instead. `--no-drafts` runs without the MTP head. The NGC base
+image ships Pillow/Jinja2/numpy but not transformers: the pip line above adds it (5.18 tested) — without it
+text serving works but the first image request dies with ModuleNotFoundError. A `Driver Release 610.43` ERROR
+banner at startup is cosmetic; the real failure mode is the context-fit line. The native 1.1.2 build measured
+66 tok/s single-stream and 334 tok/s at eight concurrent requests on an idle box (no effective MTP drafting)
+and rejects image input, so it does not replace this path yet.
 
 ## Credits
 
