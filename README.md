@@ -106,8 +106,9 @@ and rejects image input, so it does not replace this path yet.
 
 ## Retrieval stack (embedding + reranker)
 
-Both are stock vLLM pooling models — no custom image. The recipe pins `vllm/vllm-openai:v0.28.0`, the same
-version the author's production runs, so vectors and scores are reproducible.
+Both are stock vLLM pooling models — no custom image. The recipe pins `vllm/vllm-openai:v0.32.0`, the same
+version the author's production runs, so vectors and scores are reproducible. Cross-version acceptance against
+a 0.28.0 deployment measured cosine 1.000000 on embeddings and identical rerank scores to 4 decimals.
 
 ```bash
 hf download Qwen/Qwen3-Embedding-0.6B --local-dir /models/Qwen3-Embedding-0.6B
@@ -131,15 +132,15 @@ for name in os.listdir(base):
 PY
 
 docker run -d --name embed --gpus all --network host --ipc host \
-  -v /models:/models:ro --restart unless-stopped vllm/vllm-openai:v0.28.0 \
+  -v /models:/models:ro --restart unless-stopped vllm/vllm-openai:v0.32.0 \
   /models/Qwen3-Embedding-0.6B --served-model-name qwen3-embedding \
     --convert embed --pooler-config '{"pooling_type":"LAST"}' \
     --max-model-len 16384 --max-num-seqs 10 --gpu-memory-utilization 0.04
 
 docker run -d --name rerank --gpus all --network host --ipc host \
-  -v /models:/models:ro --restart unless-stopped vllm/vllm-openai:v0.28.0 \
+  -v /models:/models:ro --restart unless-stopped vllm/vllm-openai:v0.32.0 \
   /models/Qwen3-Reranker-0.6B-seqcls --served-model-name qwen3-reranker \
-    --runner pooling --convert classify --dtype float16 \
+    --runner pooling --convert classify --dtype float16 --enforce-eager \
     --max-model-len 4096 --max-num-seqs 32 --gpu-memory-utilization 0.085 \
     --chat-template /models/Qwen3-Reranker-0.6B-seqcls/chat_template.jinja
 ```
@@ -147,7 +148,9 @@ docker run -d --name rerank --gpus all --network host --ipc host \
 Verify: `bash deploy/check-retrieval.sh` (embedding dims + rerank scores for a fixed pair).
 
 Notes: the image's entrypoint is already `vllm serve` — the docker run commands pass the model path
-directly, do not prepend `serve` (a double `serve serve` fails instantly). The `gpu-memory-utilization`
+directly, do not prepend `serve` (a double `serve serve` fails instantly). Reranker needs `--enforce-eager`:
+v0.32 enables PIECEWISE cudagraphs for pooling models and the capture OOMs inside the small memory budget.
+The `gpu-memory-utilization`
 caps are tuned for coexistence with the two 35B engines (~53 GB total engine footprint on a 121 GB box) —
 raise them when running the retrieval pair alone. The 4B variants of both models exist upstream; the 0.6B
 pair keeps retrieval latency low at ~5 GB combined. The author's production puts a rate-limiting proxy in
