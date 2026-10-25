@@ -30,6 +30,7 @@ services:
     volumes:
       - ../models:/models:ro
       - qwen36-cache:/root/.cache
+    gpus: all
     command: >-
       tensorfold serve /models/Qwen3.6-35B-A3B-MLX-4bit-MTP
       --name qwen3.6-35b-a3b --alias qwen3.6-35b
@@ -53,6 +54,7 @@ services:
     volumes:
       - ../models:/models:ro
       - sage-cache:/root/.cache
+    gpus: all
     command: >-
       tensorfold serve /models/Sage-A1.5-MLX-4bit
       --name sage-a1.5
@@ -61,7 +63,7 @@ services:
       --context 118784 --prompt-cache-gib 8 --no-update-check
 
   embed:
-    image: vllm/vllm-openai:v0.28.0
+    image: vllm/vllm-openai:v0.32.0
     container_name: embed
     restart: unless-stopped
     network_mode: host
@@ -70,6 +72,7 @@ services:
       - HF_HUB_OFFLINE=1
     volumes:
       - ../models:/models:ro
+    gpus: all
     command: >-
       /models/Qwen3-Embedding-0.6B
       --served-model-name qwen3-embedding
@@ -78,7 +81,7 @@ services:
       --max-model-len 16384 --max-num-seqs 10 --gpu-memory-utilization 0.04
 
   rerank:
-    image: vllm/vllm-openai:v0.28.0
+    image: vllm/vllm-openai:v0.32.0
     container_name: rerank
     restart: unless-stopped
     network_mode: host
@@ -87,11 +90,12 @@ services:
       - HF_HUB_OFFLINE=1
     volumes:
       - ../models:/models:ro
+    gpus: all
     command: >-
       /models/Qwen3-Reranker-0.6B-seqcls
       --served-model-name qwen3-reranker
       --host 0.0.0.0 --port 8005
-      --runner pooling --convert classify --dtype float16
+      --runner pooling --convert classify --dtype float16 --enforce-eager
       --max-model-len 4096 --max-num-seqs 32 --gpu-memory-utilization 0.085
       --chat-template /models/Qwen3-Reranker-0.6B-seqcls/chat_template.jinja
 
